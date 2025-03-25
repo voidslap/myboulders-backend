@@ -12,10 +12,10 @@ class User(db.Model):
     register_date = db.Column(db.DateTime, nullable=False, default=func.now())
     
     # Creating relationships between tables connected to User 
-    achievements = db.relationship('Achievement', backref='user', lazy=True)
-    goals = db.relationship('Goal', backref='user', lazy=True)
-    climbing_sessions = db.relationship('ClimbingSession', backref='user', lazy=True)
-    completed_routes = db.relationship('CompletedRoute', backref='user', lazy=True)
+    achievements = db.relationship('achievements', backref='user', lazy=True)
+    goals = db.relationship('goals', backref='users', lazy=True)
+    climbing_sessions = db.relationship('climbing_sessions', backref='user', lazy=True)
+    completed_routes = db.relationship('completed_routes', backref='user', lazy=True)
 
     def __repr__(self):
         return f"<User {self.username}>"
