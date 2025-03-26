@@ -11,3 +11,5 @@ class Route(db.Model):
     completed_route = db.relationship('CompletedRoute', uselist=False, back_populates='route')
     # One-to-Many relationship with DifficultyLevel
     difficulty = db.relationship('DifficultyLevel', backref='routes')
+    # One-to-Many relationship with ClimbingSession
+    climbing_sessions = db.relationship('ClimbingSession', back_populates='route')
