@@ -9,7 +9,7 @@ class CompletedRoute(db.Model):
     route_id = db.Column(db.Integer, db.ForeignKey('routes.id'), nullable=False)
     flash = db.Column(db.Boolean, nullable=False)
     date = db.Column(db.DateTime, nullable=False, default=func.now())
-    image_url = db.Column(db.BigInteger, nullable=False)
+    image_url = db.Column(db.String(1000), nullable=True)
     
     # Relationships
     route = db.relationship('Route', backref=db.backref('completed_by', lazy=True))
