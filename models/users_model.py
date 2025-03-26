@@ -15,7 +15,6 @@ class User(db.Model):
     # One-to-Many relationships
     achievements = db.relationship('Achievement', backref='user', lazy=True)
     goals = db.relationship('Goal', backref='user', lazy=True)
-    climbing_sessions = db.relationship('ClimbingSession', backref='user', lazy=True)
     completed_routes = db.relationship('CompletedRoute', backref='user', lazy=True)
     
     def __repr__(self):
