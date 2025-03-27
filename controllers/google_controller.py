@@ -1,4 +1,9 @@
 import os
+import sys
+
+# Add the project root to Python path for proper imports
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
@@ -121,37 +126,79 @@ def post_img_to_db(view_link, direct_link, target_type, target_id, **kwargs):
         return None, f"Databasfel: {str(e)}"
 
 
+def create_drive_service():
+    """Helper function to create and return an authenticated Drive service"""
+    creds = authenticate_google_drive()
+    return build('drive', 'v3', credentials=creds)
+
+
 if __name__ == '__main__':
-    filepath = 'bild.jpg'  # byt till din bildfil
-    service = authenticate_google_drive()
-    view_link, direct_link = upload_image(service, filepath)
+    # Handle as a script when run directly
     
-    print("🔗 Web View Link:", view_link)
-    print("⬇️ Direct Download Link:", direct_link)
-    
-    # Exempel på användning:
-    # from flask import current_app
-    # with current_app.app_context():
-    #     # För att lägga till en bild för en genomförd rutt:
-    #     result, error = post_img_to_db(
-    #         view_link, 
-    #         direct_link,
-    #         target_type='completed_route',
-    #         target_id=None,  # None för ny post, ett ID för att uppdatera befintlig
-    #         user_id=1,
-    #         route_id=2,
-    #         flash=True
-    #     )
-    #
-    #     # För att uppdatera användarens profilbild:
-    #     # result, error = post_img_to_db(
-    #     #     view_link,
-    #     #     direct_link,
-    #     #     target_type='user_profile',
-    #     #     target_id=1  # Användar-ID
-    #     # )
-    #
-    #     if error:
-    #         print(f"Fel: {error}")
-    #     else:
-    #         print(f"Sparad bild: {result}")
+    # 1. Import Flask app to get application context
+    try:
+        from app import app
+        
+        # Check for command line arguments
+        if len(sys.argv) > 1:
+            filepath = sys.argv[1]  # Use command line argument as filepath
+        else:
+            filepath = input("Enter path to image file: ")  # Ask for filepath
+        
+        print(f"Uploading image: {filepath}")
+        
+        # Create service and upload image
+        service = create_drive_service()
+        view_link, direct_link = upload_image(service, filepath)
+        
+        print("🔗 Web View Link:", view_link)
+        print("⬇️ Direct Download Link:", direct_link)
+        
+        # Ask if user wants to save to database
+        save_to_db = input("Do you want to save this image to the database? (y/n): ")
+        
+        if save_to_db.lower() == 'y':
+            target_type = input("Enter target type (completed_route/user_profile): ")
+            
+            with app.app_context():
+                if target_type == 'completed_route':
+                    user_id = int(input("Enter user ID: "))
+                    route_id = int(input("Enter route ID: "))
+                    flash_input = input("Flash? (y/n): ")
+                    flash = flash_input.lower() == 'y'
+                    
+                    result, error = post_img_to_db(
+                        view_link, 
+                        direct_link,
+                        target_type='completed_route',
+                        target_id=None,
+                        user_id=user_id,
+                        route_id=route_id,
+                        flash=flash
+                    )
+                
+                elif target_type == 'user_profile':
+                    user_id = int(input("Enter user ID: "))
+                    
+                    result, error = post_img_to_db(
+                        view_link,
+                        direct_link,
+                        target_type='user_profile',
+                        target_id=user_id
+                    )
+                
+                else:
+                    print("Invalid target type.")
+                    sys.exit(1)
+                
+                if error:
+                    print(f"Error: {error}")
+                else:
+                    print(f"Image saved successfully: {result}")
+                
+    except ImportError as e:
+        print(f"Error importing Flask app: {e}")
+        print("\nThis script must be run from the project root or in the Flask application context.")
+        print("Try running it with: python -m controllers.google_controller")
+    except Exception as e:
+        print(f"Error: {e}")
