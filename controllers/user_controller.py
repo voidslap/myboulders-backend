@@ -24,7 +24,7 @@ def create_user(username, password):
     except Exception as e:
         db.session.rollback()
         return None, 'Database error'
-    
+
 
 def get_user_by_id_or_username(user_id=None, username=None):
     if user_id:
