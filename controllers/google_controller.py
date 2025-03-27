@@ -1,6 +1,10 @@
 import os
 import sys
 
+# TODO: Fixa så bild URLen returnar enbart image URL och inte en download länk
+# När allt funkar se till att ta bort all skit som användes för testing
+
+
 # Add the project root to Python path for proper imports
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
