@@ -1,4 +1,5 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, make_response
+from controllers import auth_controller
 from controllers.auth_controller import authenticate_user
 
 # __name__  is telling Flask "where am I in the Python package structure"
