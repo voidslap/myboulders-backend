@@ -4,6 +4,7 @@ from controllers.auth_controller import authenticate_user
 # __name__  is telling Flask "where am I in the Python package structure"
 auth_routes = Blueprint('auth_routes', __name__)
 
+#Login
 @auth_routes.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -11,13 +12,23 @@ def login():
     # Validate that required fields exist in request
     if not data or 'username' not in data or 'password' not in data:
         return jsonify({'error': 'Missing username or password'}), 400
-    
 
-    user_data, error = authenticate_user(data['username'], data['password'])
+    token, error = auth_controller.authenticate_user(
+        data['username'],
+        data['password']
+    )
 
     if error:
         return jsonify({'error': error}), 401
-    
-    return jsonify({'message': 'Login successful {}'.format(user_data['username'])}), 200
 
-    
+    response = make_response(jsonify({'message': 'Login successful'}))
+    response.set_cookie('token', token, httponly=True)
+
+    return response, 200
+
+#Logout (deletes JWT-Cookie)
+@auth_routes.route('/logout', methods=['POST'])
+def logout():
+    response = make_response(jsonify({'message': 'Logged out'}))
+    response.set_cookie('token', '', expires=0)
+    return response, 200
