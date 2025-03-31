@@ -24,7 +24,7 @@ def create_user(username, password):
     except Exception as e:
         db.session.rollback()
         return None, 'Database error'
-    
+
 
 # This function talks to the route search_user in user_routes.py
 def get_user_by_id_or_username(user_id=None, username=None):
