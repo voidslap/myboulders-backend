@@ -1,6 +1,7 @@
-from flask import Blueprint, jsonify, request, make_response
-from controllers import auth_controller
+from flask import Blueprint, jsonify, request
+from controllers.auth_controller import authenticate_user
 
+# __name__  is telling Flask "where am I in the Python package structure"
 auth_routes = Blueprint('auth_routes', __name__)
 
 #Login
@@ -8,7 +9,8 @@ auth_routes = Blueprint('auth_routes', __name__)
 def login():
     data = request.get_json()
 
-    if not data or not data.get('username') or not data.get('password'):
+    # Validate that required fields exist in request
+    if not data or 'username' not in data or 'password' not in data:
         return jsonify({'error': 'Missing username or password'}), 400
 
     token, error = auth_controller.authenticate_user(
