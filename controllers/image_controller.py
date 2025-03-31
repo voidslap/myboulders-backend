@@ -33,7 +33,12 @@ IMGUR_TOKEN_EXPIRY = 0
 def get_account_token():
     """
     Hämta en access token genom att använda användarnamn och lösenord.
+    
+    Använder Password Grant flow för att autentisera mot Imgur API.
     Detta ger högre uppladdningsgränser (200MB istället för 10MB).
+    
+    Returns:
+        str or None: Access token om autentisering lyckas, annars None
     """
     global IMGUR_ACCESS_TOKEN, IMGUR_TOKEN_EXPIRY
     
@@ -74,16 +79,20 @@ def get_account_token():
         return None
 
 
-def upload_to_imgur(filepath):
+def upload_to_imgur(filepath, max_retries=3, retry_delay=2):
     """
     Ladda upp en bild till Imgur och få direktlänk till bilden.
+    
     Försöker automatiskt använda kontoinloggning för högre uppladdningsgränser om möjligt.
+    Implementerar retry-logik för bättre hantering av tillfälliga nätverksproblem.
     
     Args:
         filepath (str): Sökväg till bildfilen som ska laddas upp
+        max_retries (int): Maximalt antal försök vid nätverksfel
+        retry_delay (int): Sekunder att vänta mellan försök
         
     Returns:
-        tuple: (direktlänk till bilden, felmeddelande eller None)
+        tuple: (direktlänk till bilden (str) eller None, felmeddelande (str) eller None)
     """
     try:
         # Kontrollera om filen finns
@@ -101,21 +110,18 @@ def upload_to_imgur(filepath):
         # Konvertera bilden till base64
         b64_image = base64.b64encode(binary_data)
         
-        # Försök att hämta access token om filen är stor eller om vi explicit vill använda kontoinloggning
+        # Försök att hämta access token om filen är stor
         if need_account:
-            print(f"Filstorlek: {file_size_mb:.2f}MB - Försöker med kontoinloggning för högre uppladdningsgräns...")
             access_token = get_account_token()
             
             if access_token:
                 headers = {
                     'Authorization': f'Bearer {access_token}'
                 }
-                print("Använder kontoinloggning (200MB gräns).")
             else:
                 headers = {
                     'Authorization': f'Client-ID {IMGUR_CLIENT_ID}'
                 }
-                print(f"Varning: Filen är {file_size_mb:.2f}MB, vilket närmar sig den anonyma gränsen på 10MB.")
                 if file_size_mb > 10:
                     return None, f"Filen är för stor ({file_size_mb:.2f}MB). Anonym uppladdning är begränsad till 10MB."
         else:
@@ -123,7 +129,6 @@ def upload_to_imgur(filepath):
             headers = {
                 'Authorization': f'Client-ID {IMGUR_CLIENT_ID}'
             }
-            print(f"Använder anonym uppladdning (10MB gräns). Filstorlek: {file_size_mb:.2f}MB")
         
         # Förbereder data för uppladdning
         data = {
@@ -133,31 +138,41 @@ def upload_to_imgur(filepath):
             'title': f'MyBoulders upload: {os.path.basename(filepath)}'
         }
         
-        # Skicka förfrågan till Imgur API
-        response = requests.post(
-            IMGUR_API_URL,
-            headers=headers,
-            data=data
-        )
-        
-        # Kontrollera om uppladdningen lyckades
-        if response.status_code == 200:
-            json_data = response.json()
+        # Försök med flera försök vid nätverksfel
+        for attempt in range(max_retries):
+            try:
+                # Skicka förfrågan till Imgur API
+                response = requests.post(
+                    IMGUR_API_URL,
+                    headers=headers,
+                    data=data,
+                    timeout=30  # Explicit timeout
+                )
+                
+                # Kontrollera om uppladdningen lyckades
+                if response.status_code == 200:
+                    json_data = response.json()
+                    
+                    if json_data.get('success'):
+                        # Hämta direktlänk till bilden
+                        image_url = json_data['data']['link']
+                        return image_url, None
+                    else:
+                        error_msg = json_data.get('data', {}).get('error', 'Okänt fel')
+                
+                # Om vi får 5xx-fel från servern, försök igen
+                if 500 <= response.status_code < 600:
+                    time.sleep(retry_delay)
+                    continue
+                
+                # För andra fel, returnera felmeddelande
+                return None, f"API-fel: {response.status_code} - {response.text}"
+                
+            except requests.exceptions.RequestException as e:
+                time.sleep(retry_delay)
             
-            if json_data['success']:
-                # Hämta direktlänk till bilden
-                image_url = json_data['data']['link']
-                delete_hash = json_data['data']['deletehash']
-                
-                print(f"\nUppladdning lyckades!")
-                print(f"Bild URL: {image_url}")
-                print(f"Delete Hash: {delete_hash} (spara denna om du behöver ta bort bilden senare)\n")
-                
-                return image_url, None
-            else:
-                return None, f"Uppladdning misslyckades: {json_data['data']['error']}"
-        else:
-            return None, f"API-fel: {response.status_code} - {response.text}"
+        # Om vi når hit har alla försök misslyckats
+        return None, f"Uppladdning misslyckades efter {max_retries} försök."
             
     except Exception as e:
         return None, f"Ett fel inträffade: {str(e)}"
@@ -166,6 +181,8 @@ def upload_to_imgur(filepath):
 def post_img_to_db(image_url, target_type, target_id, **kwargs):
     """
     Spara bildlänkar till databasen.
+    
+    Uppdaterar eller skapar poster i databasen beroende på target_type.
     
     Args:
         image_url (str): Direktlänk till bilden på Imgur
@@ -179,7 +196,7 @@ def post_img_to_db(image_url, target_type, target_id, **kwargs):
             Om target_type='user_profile', behövs inga extra parametrar
                 
     Returns:
-        tuple: (objekt, felmeddelande eller None)
+        tuple: (databasobjekt eller None, felmeddelande (str) eller None)
     """
     try:
         if target_type == 'completed_route':
@@ -227,7 +244,13 @@ def post_img_to_db(image_url, target_type, target_id, **kwargs):
 
 
 if __name__ == '__main__':
-    # Kör som ett fristående skript
+    """
+    Test-funktion för manuell testning av bilduppladdning och databaslagring.
+    Detta körs endast när filen körs direkt, inte när den importeras som en modul.
+    
+    Användning:
+        python -m controllers.image_controller
+    """
     try:
         from app import app
         
