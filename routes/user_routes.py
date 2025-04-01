@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
-from controllers.user_controller import create_user, get_user_by_id_or_username, update_user, delete_user
+from controllers.user_controller import create_user, get_user_by_id_or_username, delete_user
+
 
 user_routes = Blueprint('user_routes', __name__)
 
@@ -16,20 +17,6 @@ def search_user():
     else:
         return jsonify(user_data), 200
     
-
-@user_routes.route('/create', methods=['POST'])
-def create_user_route():
-    data = request.get_json() # Assuming the request body is JSON 
-    username = data.get('username') 
-    password = data.get('password')
-
-    # The func create_user is in the user_controller.py
-    user_data, error = create_user(username=username, password=password)
-
-    if error:
-        return jsonify({'error': error}), 400
-    else:
-        return jsonify(user_data), 201
     
 @user_routes.route("/delete", methods=["DELETE"])
 def delete_user_route():
