@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_cors import CORS
 from routes.user_routes import user_routes
+from routes.image_routes import image_routes
 from routes.auth_routes import auth_routes
 from config.db_config import db, get_db_uri
 
@@ -18,6 +19,7 @@ db.init_app(app)
 # Register blueprints
 app.register_blueprint(user_routes, url_prefix='/api/users')
 app.register_blueprint(auth_routes, url_prefix='/api/auth')
+app.register_blueprint(image_routes, url_prefix='/api/images')
 
 @app.route('/')
 def hello_world():
