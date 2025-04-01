@@ -20,7 +20,7 @@ db.init_app(app)
 # Register blueprints
 app.register_blueprint(user_routes, url_prefix='/api/users')
 app.register_blueprint(auth_routes, url_prefix='/api/auth')
-app.register_blueprint(leaderboard_bp, url_prefix='/api')
+app.register_blueprint(leaderboard_bp, url_prefix='/api/leaderboard')
 app.register_blueprint(journal_routes, url_prefix='/api/journal')
 
 @app.route('/')
