@@ -2,4 +2,4 @@ flask
 flask-sqlalchemy
 dotenv
 pip-tools
-
+PyTest
