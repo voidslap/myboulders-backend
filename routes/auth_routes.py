@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify, request, make_response
 from controllers import auth_controller
 from controllers.auth_controller import authenticate_user
+from controllers.user_controller import create_user
+
 
 # __name__  is telling Flask "where am I in the Python package structure"
 auth_routes = Blueprint('auth_routes', __name__)
@@ -33,3 +35,20 @@ def logout():
     response = make_response(jsonify({'message': 'Logged out'}))
     response.set_cookie('token', '', expires=0)
     return response, 200
+
+
+@auth_routes.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({'error': 'Missing username or password'}), 400
+
+    user_data, error = create_user(username=username, password=password)
+
+    if error:
+        return jsonify({'error': error}), 400
+    else:
+        return jsonify(user_data), 201
