@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
-from controllers.user_controller import get_user_by_id_or_username, delete_user, 
+from controllers.user_controller import create_user, get_user_by_id_or_username, delete_user
+
 
 user_routes = Blueprint('user_routes', __name__)
 
