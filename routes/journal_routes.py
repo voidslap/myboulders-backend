@@ -6,7 +6,7 @@ from controllers.journal_controller import (
     update_journal_entry, 
     delete_journal_entry
 )
-from controllers.route_controller import create_route  # Add this import
+from controllers.route_controller import create_route
 from controllers.auth_controller import verify_jwt
 from datetime import datetime
 
@@ -35,6 +35,9 @@ def post_journal_entry():
     
     data = request.get_json()
     
+    # Debug the received data
+    print(f"Received data for journal entry: {data}")
+    
     # Validate required fields for route creation
     if 'route_type' not in data or 'difficulty' not in data:
         return jsonify({'error': 'Missing required fields: route_type and difficulty'}), 400
@@ -60,7 +63,7 @@ def post_journal_entry():
         date = None
         if 'date' in data and data['date']:
             try:
-                date = datetime.fromisoformat(data['date'])
+                date = datetime.fromisoformat(data['date'].replace('Z', '+00:00'))
             except ValueError:
                 return jsonify({'error': 'Invalid date format. Use ISO format (YYYY-MM-DDThh:mm:ss)'}), 400
         
@@ -85,10 +88,11 @@ def post_journal_entry():
             'description': new_route.get('description')
         })
         
-        return jsonify({'message': 'Journal entry created successfully', 'entry': response_data}), 201
+        return jsonify(response_data), 201
         
     except Exception as e:
-        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+        print(f"Error in post_journal_entry: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @journal_routes.route('/edit/<int:entry_id>', methods=['GET'])
 def get_journal_entry(entry_id):
