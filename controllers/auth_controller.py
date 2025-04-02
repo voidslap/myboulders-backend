@@ -20,7 +20,7 @@ def authenticate_user(username, password):
     if not user:
         return None, 'User not found'
     
-    if not check_password_hash(user.password_hash, password):
+    if not check_password_hash(user.hashed_password, password):
         return None, 'Invalid password'
     
     token = generate_jwt(user)
@@ -40,5 +40,5 @@ def verify_jwt():
         return None, 'Token expired'
     except jwt.InvalidTokenError:
         return None, 'Invalid token'
-    
+
 
