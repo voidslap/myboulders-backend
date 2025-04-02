@@ -1,5 +1,6 @@
 from models.completed_routes_model import CompletedRoute
 from models.routes_model import Route
+from models.difficulty_levels_model import DifficultyLevel
 from config.db_config import db
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -172,45 +173,57 @@ def create_journal_entry(user_id, route_id, flash=False, image_url=None, date=No
         db.session.rollback()
         return None, f"Database error: {str(e)}"
 
-def update_journal_entry(entry_id, route_id=None, flash=None, image_url=None, date=None):
+def update_journal_entry(entry_id, route_id=None, flash=None, image_url=None, date=None, difficulty=None, route_type=None):
     """
-    Uppdaterar en befintlig journalanteckning (genomförd klätterrutt).
-    
-    Uppdaterar endast de fält som skickats med, övriga fält förblir oförändrade.
-    Om ett nytt route_id anges, verifieras att rutten existerar.
+    Updates an existing journal entry (completed climbing route).
     
     Args:
-        entry_id (int): ID för journalanteckningen som ska uppdateras
-        route_id (int, optional): Nytt ID för klätterrutten. Default: None (ingen ändring)
-        flash (bool, optional): Uppdaterad flash-status. Default: None (ingen ändring)
-        image_url (str, optional): Ny URL till en bild. Default: None (ingen ändring)
-        date (datetime, optional): Nytt datum och tid. Default: None (ingen ändring)
+        entry_id (int): ID for the journal entry to update
+        route_id (int, optional): New ID for the climbing route. Default: None (no change)
+        flash (bool, optional): Updated flash status. Default: None (no change)  
+        image_url (str, optional): New URL to an image. Default: None (no change)
+        date (datetime, optional): New date and time. Default: None (no change)
+        difficulty (str, optional): New difficulty grade. Default: None (no change)
+        route_type (str, optional): New route type. Default: None (no change)
         
     Returns:
         tuple: (dict, str or None)
-            - Vid lyckad uppdatering: (uppdaterad journalanteckning som dictionary, None)
-            - Vid fel: (None, felmeddelande)
-            
-    Exempel på returdata vid lyckat anrop:
-    {
-        'id': 42,
-        'user_id': 3,
-        'route_id': 7,
-        'date': '2025-04-01T15:30:45',
-        'flash': True,
-        'image_url': 'https://imgur.com/example.jpg'
-    }
+            - On success: (updated journal entry as dictionary, None)
+            - On error: (None, error message)
     """
     try:
         entry = CompletedRoute.query.get(entry_id)
         if not entry:
             return None, "Journal entry not found"
         
-        # Update only the provided fields
+        # Get the route to potentially update
+        route = Route.query.get(entry.route_id)
+        if not route:
+            return None, "Route not found for this entry"
+        
+        # Update the route if difficulty or type is provided
+        route_updated = False
+        if difficulty is not None:
+            # Find the difficulty level ID
+            difficulty_level = DifficultyLevel.query.filter_by(grade=difficulty).first()
+            if not difficulty_level:
+                # If grade doesn't exist, create it
+                difficulty_level = DifficultyLevel(grade=difficulty)
+                db.session.add(difficulty_level)
+                db.session.flush()  # Get ID without committing
+            
+            route.difficulty_id = difficulty_level.id
+            route_updated = True
+            
+        if route_type is not None:
+            route.type = route_type
+            route_updated = True
+            
+        # Update the completed route fields
         if route_id is not None:
             # Verify route exists
-            route = Route.query.get(route_id)
-            if not route:
+            new_route = Route.query.get(route_id)
+            if not new_route:
                 return None, "Route not found"
             entry.route_id = route_id
         
@@ -223,18 +236,29 @@ def update_journal_entry(entry_id, route_id=None, flash=None, image_url=None, da
         if date is not None:
             entry.date = date
         
+        # Commit all changes
         db.session.commit()
         
-        return {
+        # Get updated route data for the response
+        updated_route = Route.query.join(DifficultyLevel).filter(Route.id == entry.route_id).first()
+        
+        # Prepare the full response with related data
+        response_data = {
             'id': entry.id,
             'user_id': entry.user_id,
             'route_id': entry.route_id,
             'date': entry.date.isoformat(),
             'flash': entry.flash,
-            'image_url': entry.image_url
-        }, None
+            'image_url': entry.image_url,
+            'route_type': updated_route.type,
+            'difficulty': updated_route.difficulty.grade
+        }
+        
+        return response_data, None
+        
     except Exception as e:
         db.session.rollback()
+        print(f"Error updating journal entry: {str(e)}")
         return None, f"Database error: {str(e)}"
 
 def delete_journal_entry(entry_id):
