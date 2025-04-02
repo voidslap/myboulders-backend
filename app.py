@@ -84,8 +84,6 @@ def hello_world():
 
 # Run server
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
-    initialize_database()
-    create_test_user()
-    
-    app.run(debug=True, port=5000)
+    initialize_database()  # Initialize the database first
+    create_test_user()     # Then create test users
+    app.run(debug=True, port=5000)  # Finally, run the server (only once)
