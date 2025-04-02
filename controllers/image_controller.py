@@ -3,7 +3,10 @@ import sys
 import requests
 import base64
 import time
+import random
+import string
 from dotenv import load_dotenv
+from werkzeug.utils import secure_filename
 
 # Add the project root to Python path for proper imports
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
@@ -241,6 +244,45 @@ def post_img_to_db(image_url, target_type, target_id, **kwargs):
     except Exception as e:
         db.session.rollback()
         return None, f"Databasfel: {str(e)}"
+
+
+def save_image(file):
+    """
+    Spara en uppladdad bild med ett randomiserat filnamn.
+    
+    Funktionen tar emot ett file-objekt från en Flask-request,
+    genererar ett slumpmässigt filnamn med 10 tecken plus originalfilens filtyp,
+    och sparar filen i temp-mappen.
+    
+    Args:
+        file: Ett Flask FileStorage-objekt från request.files
+        
+    Returns:
+        str: Sökvägen till den sparade filen
+    """
+    try:
+        # Skapa temporär mapp om den inte finns
+        temp_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'temp')
+        os.makedirs(temp_folder, exist_ok=True)
+        
+        # Extrahera filändelse från originalfilen
+        file_extension = os.path.splitext(file.filename)[1].lower()
+        
+        # Generera ett slumpmässigt filnamn med 10 tecken
+        random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+        filename = f"{random_chars}{file_extension}"
+        
+        # Fullständig sökväg
+        filepath = os.path.join(temp_folder, filename)
+        
+        # Spara filen
+        file.save(filepath)
+        
+        return filepath
+        
+    except Exception as e:
+        print(f"Fel vid sparande av bild: {str(e)}")
+        return None
 
 
 if __name__ == '__main__':

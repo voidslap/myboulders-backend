@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_cors import CORS
 from routes.user_routes import user_routes
+from routes.image_routes import image_routes
 from routes.auth_routes import auth_routes
 from routes.leaderboard import leaderboard_bp
 from routes.journal_routes import journal_routes
@@ -22,6 +23,7 @@ app.register_blueprint(user_routes, url_prefix='/api/users')
 app.register_blueprint(auth_routes, url_prefix='/api/auth')
 app.register_blueprint(leaderboard_bp, url_prefix='/api/leaderboard')
 app.register_blueprint(journal_routes, url_prefix='/api/journal')
+app.register_blueprint(image_routes, url_prefix='/api/images')
 
 @app.route('/')
 def hello_world():
