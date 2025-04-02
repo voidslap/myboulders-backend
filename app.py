@@ -5,6 +5,7 @@ from routes.image_routes import image_routes
 from routes.auth_routes import auth_routes
 from routes.leaderboard import leaderboard_bp
 from routes.journal_routes import journal_routes
+from routes.achievement_routes import achievement_routes
 from config.db_config import db, get_db_uri
 
 app = Flask(__name__)
@@ -24,6 +25,7 @@ app.register_blueprint(auth_routes, url_prefix='/api/auth')
 app.register_blueprint(leaderboard_bp, url_prefix='/api/leaderboard')
 app.register_blueprint(journal_routes, url_prefix='/api/journal')
 app.register_blueprint(image_routes, url_prefix='/api/images')
+app.register_blueprint(achievement_routes, url_prefix='/api/achievements')
 
 @app.route('/')
 def hello_world():
