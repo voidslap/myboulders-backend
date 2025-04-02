@@ -128,27 +128,30 @@ def edit_journal_entry(entry_id):
         return jsonify({'error': 'Unauthorized to edit this journal entry'}), 403
     
     data = request.get_json()
+    print(f"Editing journal entry {entry_id} with data: {data}")
     
     # Parse fields
-    route_id = int(data['route_id']) if 'route_id' in data else None
-    flash = bool(data['flash']) if 'flash' in data else None
+    flash = bool(data.get('flash', False))
     image_url = data.get('image_url')
+    difficulty = data.get('difficulty')  # Get the new difficulty
+    route_type = data.get('route_type')  # Get the new route type
     
     # Parse date if provided
     date = None
     if 'date' in data and data['date']:
         try:
-            date = datetime.fromisoformat(data['date'])
+            date = datetime.fromisoformat(data['date'].replace('Z', '+00:00'))
         except ValueError:
             return jsonify({'error': 'Invalid date format. Use ISO format (YYYY-MM-DDThh:mm:ss)'}), 400
     
     # Update entry
     updated_entry, error = update_journal_entry(
         entry_id=entry_id,
-        route_id=route_id,
         flash=flash,
         image_url=image_url,
-        date=date
+        date=date,
+        difficulty=difficulty,  # Pass the difficulty to update the route
+        route_type=route_type   # Pass the route type to update the route
     )
     
     if error:
