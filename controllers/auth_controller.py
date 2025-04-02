@@ -1,9 +1,11 @@
 import jwt
 import datetime
-from flask import request, jsonify
+from flask import request, jsonify, redirect
 from models.users_model import User
 from werkzeug.security import check_password_hash
 from config.db_config import Config
+from functools import wraps
+from flask import request, jsonify
 
 # 🔐 Generate JWT token
 def create_jwt_token(user_id, username):
@@ -41,3 +43,18 @@ def verify_jwt():
         return None, 'Token expired'
     except jwt.InvalidTokenError:
         return None, 'Invalid token'
+
+
+def require_auth(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token_data, error = verify_jwt()
+
+        if error:
+            return jsonify({'error': error}), 401
+
+        # Sätt användarens data i request context om du vill (valfritt)
+        request.user = token_data
+        return f(*args, **kwargs)
+    
+    return decorated_function

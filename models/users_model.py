@@ -1,6 +1,7 @@
 from config.db_config import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.sql import func
+from datetime import datetime
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -10,6 +11,7 @@ class User(db.Model):
     hashed_password = db.Column(db.String(2000), nullable=False)
     email = db.Column(db.String(200), nullable=False, unique=True)
     profile_image_url = db.Column(db.String(1000), nullable=False)
+    birthdate = db.Column(db.Date, nullable=True)
     register_date = db.Column(db.DateTime, nullable=False, default=func.now())
     
     # One-to-Many relationships

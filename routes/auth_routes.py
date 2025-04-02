@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify, request, make_response
 from controllers import auth_controller
-from controllers.auth_controller import authenticate_user
-from controllers.user_controller import create_user
+from controllers.user_controller import register_user
+from controllers.auth_controller import  require_auth
+
 
 
 # __name__  is telling Flask "where am I in the Python package structure"
@@ -42,13 +43,38 @@ def register():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
+    email = data.get('email')
+    profile_image_url = data.get('profile_image_url')
+    birthdate = data.get('birthdate')  # 💡 ISO-format från frontend (ex: '2000-01-01')
 
-    if not username or not password:
-        return jsonify({'error': 'Missing username or password'}), 400
+    if not username or not password or not email:
+        return jsonify({'error': 'Missing required fields'}), 400
 
-    user_data, error = create_user(username=username, password=password)
+    user_data, error = register_user(
+        username=username,
+        password=password,
+        email=email,
+        profile_image_url=profile_image_url,
+        birthdate=birthdate
+    )
 
     if error:
         return jsonify({'error': error}), 400
-    else:
-        return jsonify(user_data), 201
+    return jsonify(user_data), 201
+
+@auth_routes.route('/me', methods=['GET'])
+@require_auth
+def get_current_user():
+    """
+    Returns the current user based on the JWT token.
+    This route is protected and requires a valid token.
+    """
+    user_data, error = auth_controller.verify_jwt()
+    
+    if error:
+        return jsonify({'error': error}), 401
+    
+    return jsonify({
+        'id': user_data.get('id'),
+        'username': user_data.get('username')
+    }), 200
