@@ -23,7 +23,13 @@ from werkzeug.security import generate_password_hash
 app = Flask(__name__)
 
 # Enable CORS for frontend (React running on port 5173)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+frontend_origin = 'http://localhost:5173'  # Adjust for your frontend URL
+
+CORS(app, 
+     resources={r"/api/*": {"origins": frontend_origin}},
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -73,9 +79,9 @@ def create_test_user():
 # Register blueprints
 app.register_blueprint(user_routes, url_prefix='/api/users')
 app.register_blueprint(auth_routes, url_prefix='/api/auth')
-app.register_blueprint(leaderboard_routes, url_prefix='/api/leaderboard')
-app.register_blueprint(journal_routes, url_prefix='/api/journal')
 app.register_blueprint(image_routes, url_prefix='/api/images')
+app.register_blueprint(journal_routes, url_prefix='/api/journal')
+app.register_blueprint(leaderboard_routes, url_prefix='/api/leaderboard')
 
 # Test route
 @app.route('/')

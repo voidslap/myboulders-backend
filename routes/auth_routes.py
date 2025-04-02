@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, make_response
 from controllers import auth_controller
-from controllers.auth_controller import authenticate_user
+from controllers.auth_controller import authenticate_user, verify_jwt
 from controllers.user_controller import create_user
 
 
@@ -52,3 +52,12 @@ def register():
         return jsonify({'error': error}), 400
     else:
         return jsonify(user_data), 201
+
+@auth_routes.route('/check', methods=['GET'])
+def check_auth():
+    """Validates if the user's JWT token is valid"""
+    user_data, error = verify_jwt()
+    if error:
+        return jsonify({'error': error}), 401
+    
+    return jsonify({'authenticated': True, 'user': user_data}), 200
