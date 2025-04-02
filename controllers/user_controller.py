@@ -36,7 +36,7 @@ def get_user_by_id_or_username(user_id=None, username=None):
         return None, 'Missing user_id or username'
     
     if user:
-        return {'id': user.id, 'username': user.username, 'password_hash': user.password_hash}, None
+        return {'id': user.id, 'username': user.username, 'password_hash': user.hashed_password}, None
     else:
         return None, 'User not found'
     
