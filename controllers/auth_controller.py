@@ -5,40 +5,39 @@ from models.users_model import User
 from werkzeug.security import check_password_hash
 from config.db_config import Config
 
-def generate_jwt(user):
+# 🔐 Generate JWT token
+def create_jwt_token(user_id, username):
     payload = {
-        'id': user.id,
-        'username': user.username,
+        'id': user_id,
+        'username': username,
         'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
     }
     token = jwt.encode(payload, Config.SECRET_KEY, algorithm='HS256')
     return token
 
+# ✅ Handle login
 def authenticate_user(username, password):
     user = User.query.filter_by(username=username).first()
-
     if not user:
-        return None, 'User not found'
-    
-    if not check_password_hash(user.hashed_password, password):
-        return None, 'Invalid password'
-    
-    token = generate_jwt(user)
+        return None, "User not found"
 
+    if not user.check_password(password):
+        return None, "Invalid password"
+
+    token = create_jwt_token(user.id, user.username)
     return token, None
 
+# 🔍 Token verification
 def verify_jwt():
     token = request.cookies.get('token')
 
     if not token:
         return None, 'No token provided'
-    
+
     try:
         payload = jwt.decode(token, Config.SECRET_KEY, algorithms=['HS256'])
-        return {'id': payload['id'],  'username': payload['username']}, None
+        return {'id': payload['id'], 'username': payload['username']}, None
     except jwt.ExpiredSignatureError:
         return None, 'Token expired'
     except jwt.InvalidTokenError:
         return None, 'Invalid token'
-
-

@@ -18,8 +18,13 @@ from models.routes_model import Route
 from models.goals_model import Goal
 from models.achievements_model import Achievement
 
+from werkzeug.security import generate_password_hash
+
+# Initialize Flask app
 app = Flask(__name__)
-CORS(app)
+
+# Enable CORS for frontend (React running on port 5173)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -32,13 +37,12 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize database
 db.init_app(app)
 
-# Check if database exists and create if it doesn't
+# Check if database exists and create tables if not
 def initialize_database():
     with app.app_context():
         inspector = inspect(db.engine)
-        
-        # Check for existence of key tables (adjust based on your models)
         tables = inspector.get_table_names()
+
         if 'users' not in tables:
             logger.info("Database tables don't exist. Creating all tables...")
             db.create_all()
@@ -46,8 +50,26 @@ def initialize_database():
         else:
             logger.info("Database already exists. Skipping creation.")
 
-# Initialize the database
-initialize_database()
+# Create test user for login testing
+def create_test_user():
+    with app.app_context():
+        # 🔁 Delete old test users with same username or email
+        User.query.filter_by(username="admin").delete()
+        db.session.commit()
+
+        hashed_password = generate_password_hash("admin123")
+        user = User(
+            username="admin",
+            hashed_password=hashed_password,
+            email="admin@example.com",
+            profile_image_url="https://via.placeholder.com/150"
+        )
+
+        db.session.add(user)
+        db.session.commit()
+        print("✅ Test user created: admin / admin123")
+
+
 
 # Register blueprints
 app.register_blueprint(user_routes, url_prefix='/api/users')
@@ -60,9 +82,13 @@ app.register_blueprint(achievement_routes, url_prefix='/api/achievements')
 
 
 
+# Test route
 @app.route('/')
 def hello_world():
     return 'Hello, World!'
 
+# Run server
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    initialize_database()  # Initialize the database first
+    create_test_user()     # Then create test users
+    app.run(debug=True, port=5000)  # Finally, run the server (only once)
