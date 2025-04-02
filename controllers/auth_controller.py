@@ -29,14 +29,22 @@ def authenticate_user(username, password):
 
 # 🔍 Token verification
 def verify_jwt():
+    """Check for JWT in cookie or Authorization header"""
+    # First check for token in cookie
     token = request.cookies.get('token')
-
+    
+    # If not in cookie, check Authorization header
     if not token:
-        return None, 'No token provided'
-
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+    
+    if not token:
+        return None, 'No authentication token provided'
+        
     try:
         payload = jwt.decode(token, Config.SECRET_KEY, algorithms=['HS256'])
-        return {'id': payload['id'], 'username': payload['username']}, None
+        return payload, None
     except jwt.ExpiredSignatureError:
         return None, 'Token expired'
     except jwt.InvalidTokenError:
