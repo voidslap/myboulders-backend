@@ -160,6 +160,59 @@ def upload_registration_image():
         
         return jsonify({'error': f'Error processing image: {str(e)}'}), 500
 
+@image_routes.route('/upload/registration', methods=['POST'])
+def upload_registration_image():
+    """
+    Special endpoint for uploading profile images during user registration.
+    No authentication required.
+    """
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    # Check file type
+    if not allowed_file(file.filename):
+        return jsonify({'error': f'Invalid file type. Allowed types: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
+    
+    # Check file size
+    file_data = file.read()
+    if len(file_data) > MAX_FILE_SIZE:
+        return jsonify({'error': f'File too large. Maximum size: {MAX_FILE_SIZE/1024/1024}MB'}), 400
+    
+    # Reset file pointer
+    file.seek(0)
+
+    try:
+        # Save image and upload to Imgur
+        filepath = save_image(file)
+        
+        if not filepath:
+            return jsonify({'error': 'Failed to save image'}), 500
+        
+        # Upload to Imgur
+        image_url, error = upload_to_imgur(filepath)
+        
+        if error:
+            return jsonify({'error': f'Failed to upload image: {error}'}), 500
+        
+        # Remove local file
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        
+        # Return only the image URL
+        return jsonify({'image_url': image_url}), 200
+        
+    except Exception as e:
+        # Clean up if error
+        if 'filepath' in locals() and os.path.exists(filepath):
+            os.remove(filepath)
+        
+        return jsonify({'error': f'Error processing image: {str(e)}'}), 500
+
 @image_routes.route('/delete', methods=['DELETE'])
 @auth_required
 def delete_image(current_user):
