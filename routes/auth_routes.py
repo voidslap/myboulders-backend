@@ -1,8 +1,9 @@
 from flask import Blueprint, jsonify, request, make_response
 from controllers import auth_controller
-from controllers.auth_controller import authenticate_user, verify_jwt
+from controllers.auth_controller import authenticate_user
 from controllers.user_controller import create_user
 from models.users_model import User
+from utils.auth_decorator import auth_required
 
 # __name__  is telling Flask "where am I in the Python package structure"
 auth_routes = Blueprint('auth_routes', __name__)
@@ -72,31 +73,21 @@ def register():
         return jsonify(user_data), 201
 
 @auth_routes.route('/check', methods=['GET'])
-def check_auth():
-    """Validates if the user's JWT token is valid"""
-    user_data, error = verify_jwt()
-    if error:
-        return jsonify({'error': error}), 401
-    
-    return jsonify({'authenticated': True, 'user': user_data}), 200
+@auth_required
+def check_auth(current_user):
+    return jsonify({'authenticated': True, 'user': {
+        'id': current_user.id,
+        'username': current_user.username,
+        'email': current_user.email,
+        'profile_image_url': current_user.profile_image_url
+    }}), 200
 
 @auth_routes.route('/me', methods=['GET'])
-def get_current_user():
-    """Get the currently authenticated user's data"""
-    user_data, auth_error = verify_jwt()
-    if auth_error:
-        return jsonify({'error': auth_error}), 401
-    
-    # Get additional user data from database
-    user_id = user_data['id']
-    user = User.query.get(user_id)
-    
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
+@auth_required
+def get_current_user(current_user):
     return jsonify({
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'profile_image_url': user.profile_image_url
+        'id': current_user.id,
+        'username': current_user.username,
+        'email': current_user.email,
+        'profile_image_url': current_user.profile_image_url
     }), 200

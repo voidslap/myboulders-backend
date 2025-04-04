@@ -7,32 +7,25 @@ from controllers.journal_controller import (
     delete_journal_entry
 )
 from controllers.route_controller import create_route
-from controllers.auth_controller import verify_jwt
 from datetime import datetime
+from utils.auth_decorator import auth_required
 
 journal_routes = Blueprint('journal_routes', __name__)
 
 
 @journal_routes.route('/', methods=['GET'])
-def get_user_journal():
-    """Get all journal entries (completed routes) for the authenticated user"""
-    user_data, error = verify_jwt()
-    if error:
-        return jsonify({'error': error}), 401
-    
-    entries, error = get_journal_entries_by_user(user_data['id'])
+@auth_required
+def get_user_journal(current_user):
+    entries, error = get_journal_entries_by_user(current_user.id)
     if error:
         return jsonify({'error': error}), 404
     
     return jsonify({'entries': entries}), 200
 
 @journal_routes.route('/post', methods=['POST'])
-def post_journal_entry():
+@auth_required
+def post_journal_entry(current_user):
     """Create a new journal entry with auto-route creation"""
-    user_data, error = verify_jwt()
-    if error:
-        return jsonify({'error': error}), 401
-    
     data = request.get_json()
     
     # Debug the received data
@@ -69,7 +62,7 @@ def post_journal_entry():
         
         # Create journal entry with new route ID
         entry_data, error = create_journal_entry(
-            user_id=user_data['id'],
+            user_id=current_user.id,
             route_id=new_route['id'],
             flash=flash,
             image_url=image_url,
@@ -94,89 +87,78 @@ def post_journal_entry():
         print(f"Error in post_journal_entry: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@journal_routes.route('/edit/<int:entry_id>', methods=['GET'])
-def get_journal_entry(entry_id):
-    """Get a specific journal entry"""
-    user_data, auth_error = verify_jwt()
-    if auth_error:
-        return jsonify({'error': auth_error}), 401
-    
-    entry_data, error = get_journal_entry_by_id(entry_id)
-    if error:
-        return jsonify({'error': error}), 404
-    
-    # Verify user owns this entry
-    if entry_data['user_id'] != user_data['id']:
-        return jsonify({'error': 'Unauthorized access to this journal entry'}), 403
+@journal_routes.route('/edit/<int:entry_id>', methods=['GET', 'PUT', 'DELETE'])
+@auth_required
+def edit_journal_entry(entry_id, current_user):
+    """Get, update, or delete a specific journal entry"""
+    if request.method == 'GET':
+        """Get a specific journal entry"""
+        entry_data, error = get_journal_entry_by_id(entry_id)
+        if error:
+            return jsonify({'error': error}), 404
         
-    return jsonify({'entry': entry_data}), 200
+        # Verify user owns this entry
+        if entry_data['user_id'] != current_user.id:
+            return jsonify({'error': 'Unauthorized access to this journal entry'}), 403
+            
+        return jsonify({'entry': entry_data}), 200
 
-@journal_routes.route('/edit/<int:entry_id>', methods=['PUT'])
-def edit_journal_entry(entry_id):
-    """Update a specific journal entry"""
-    user_data, auth_error = verify_jwt()
-    if auth_error:
-        return jsonify({'error': auth_error}), 401
-    
-    # Get current entry to verify ownership
-    current_entry, error = get_journal_entry_by_id(entry_id)
-    if error:
-        return jsonify({'error': error}), 404
+    elif request.method == 'PUT':
+        """Update a specific journal entry"""
+        # Get current entry to verify ownership
+        current_entry, error = get_journal_entry_by_id(entry_id)
+        if error:
+            return jsonify({'error': error}), 404
+            
+        # Check if user owns this entry
+        if current_entry['user_id'] != current_user.id:
+            return jsonify({'error': 'Unauthorized to edit this journal entry'}), 403
         
-    # Check if user owns this entry
-    if current_entry['user_id'] != user_data['id']:
-        return jsonify({'error': 'Unauthorized to edit this journal entry'}), 403
-    
-    data = request.get_json()
-    print(f"Editing journal entry {entry_id} with data: {data}")
-    
-    # Parse fields
-    flash = bool(data.get('flash', False))
-    image_url = data.get('image_url')
-    difficulty = data.get('difficulty')  # Get the new difficulty
-    route_type = data.get('route_type')  # Get the new route type
-    
-    # Parse date if provided
-    date = None
-    if 'date' in data and data['date']:
-        try:
-            date = datetime.fromisoformat(data['date'].replace('Z', '+00:00'))
-        except ValueError:
-            return jsonify({'error': 'Invalid date format. Use ISO format (YYYY-MM-DDThh:mm:ss)'}), 400
-    
-    # Update entry
-    updated_entry, error = update_journal_entry(
-        entry_id=entry_id,
-        flash=flash,
-        image_url=image_url,
-        date=date,
-        difficulty=difficulty,  # Pass the difficulty to update the route
-        route_type=route_type   # Pass the route type to update the route
-    )
-    
-    if error:
-        return jsonify({'error': error}), 400
+        data = request.get_json()
+        print(f"Editing journal entry {entry_id} with data: {data}")
         
-    return jsonify({'message': 'Journal entry updated successfully', 'entry': updated_entry}), 200
+        # Parse fields
+        flash = bool(data.get('flash', False))
+        image_url = data.get('image_url')
+        difficulty = data.get('difficulty')  # Get the new difficulty
+        route_type = data.get('route_type')  # Get the new route type
+        
+        # Parse date if provided
+        date = None
+        if 'date' in data and data['date']:
+            try:
+                date = datetime.fromisoformat(data['date'].replace('Z', '+00:00'))
+            except ValueError:
+                return jsonify({'error': 'Invalid date format. Use ISO format (YYYY-MM-DDThh:mm:ss)'}), 400
+        
+        # Update entry
+        updated_entry, error = update_journal_entry(
+            entry_id=entry_id,
+            flash=flash,
+            image_url=image_url,
+            date=date,
+            difficulty=difficulty,  # Pass the difficulty to update the route
+            route_type=route_type   # Pass the route type to update the route
+        )
+        
+        if error:
+            return jsonify({'error': error}), 400
+            
+        return jsonify({'message': 'Journal entry updated successfully', 'entry': updated_entry}), 200
 
-@journal_routes.route('/edit/<int:entry_id>', methods=['DELETE'])
-def delete_entry(entry_id):
-    """Delete a specific journal entry"""
-    user_data, auth_error = verify_jwt()
-    if auth_error:
-        return jsonify({'error': auth_error}), 401
-    
-    # Get current entry to verify ownership
-    current_entry, error = get_journal_entry_by_id(entry_id)
-    if error:
-        return jsonify({'error': error}), 404
-        
-    # Check if user owns this entry
-    if current_entry['user_id'] != user_data['id']:
-        return jsonify({'error': 'Unauthorized to delete this journal entry'}), 403
-        
-    result, error = delete_journal_entry(entry_id)
-    if error:
-        return jsonify({'error': error}), 400
-        
-    return jsonify(result), 200
+    elif request.method == 'DELETE':
+        """Delete a specific journal entry"""
+        # Get current entry to verify ownership
+        current_entry, error = get_journal_entry_by_id(entry_id)
+        if error:
+            return jsonify({'error': error}), 404
+            
+        # Check if user owns this entry
+        if current_entry['user_id'] != current_user.id:
+            return jsonify({'error': 'Unauthorized to delete this journal entry'}), 403
+            
+        result, error = delete_journal_entry(entry_id)
+        if error:
+            return jsonify({'error': error}), 400
+            
+        return jsonify(result), 200

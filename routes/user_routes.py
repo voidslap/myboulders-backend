@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from controllers.user_controller import create_user, get_user_by_id_or_username, delete_user
+from utils.auth_decorator import auth_required
 
 
 user_routes = Blueprint('user_routes', __name__)
@@ -19,7 +20,8 @@ def search_user():
     
     
 @user_routes.route("/delete", methods=["DELETE"])
-def delete_user_route():
+@auth_required
+def delete_user_route(current_user):
     data = request.get_json()
     user_id = data.get("user_id")
     username = data.get("username")
