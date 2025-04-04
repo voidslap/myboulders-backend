@@ -1,5 +1,13 @@
 flask
 flask-sqlalchemy
-dotenv
+flask-cors
+sqlalchemy
+python-dotenv
+pyjwt
+werkzeug
+requests
+pytest
+pytest-cov
 pip-tools
-PyTest
+pytz
+dotenv
