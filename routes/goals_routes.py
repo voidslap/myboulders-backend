@@ -7,82 +7,67 @@ from controllers.goals_controller import (
     update_goal_status,
     delete_goal
 )
-from controllers.auth_controller import verify_jwt
+from utils.auth_decorator import auth_required
 
 goals_routes = Blueprint('goals_routes', __name__)
 
 @goals_routes.route('/', methods=['GET'])
-def get_goals():
+@auth_required
+def get_goals(current_user):
     """Get all goals for authenticated user"""
-    user_data, error = verify_jwt()
-    if error:
-        return jsonify({'error': error}), 401
-        
-    goals, error = get_user_goals(user_data['id'])
+    goals, error = get_user_goals(current_user.id)
     if error:
         return jsonify({'error': error}), 404
         
     return jsonify({'goals': goals}), 200
 
 @goals_routes.route('/', methods=['POST'])
-def add_goal():
+@auth_required
+def add_goal(current_user):
     """Create a new goal"""
-    user_data, error = verify_jwt()
-    if error:
-        return jsonify({'error': error}), 401
-        
     data = request.get_json()
     if not data or 'title' not in data:
         return jsonify({'error': 'Missing required fields'}), 400
         
-    goal, error = create_goal(user_data['id'], data)
+    goal, error = create_goal(current_user.id, data)
     if error:
         return jsonify({'error': error}), 400
         
     return jsonify(goal), 201
 
 @goals_routes.route('/<int:goal_id>', methods=['PUT'])
-def edit_goal(goal_id):
+@auth_required
+def edit_goal(current_user, goal_id):
     """Update an existing goal"""
-    user_data, error = verify_jwt()
-    if error:
-        return jsonify({'error': error}), 401
-        
     data = request.get_json()
     if not data:
         return jsonify({'error': 'No data provided'}), 400
         
-    goal, error = update_goal(goal_id, user_data['id'], data)
+    goal, error = update_goal(goal_id, current_user.id, data)
     if error:
         return jsonify({'error': error}), 400
         
     return jsonify(goal), 200
 
 @goals_routes.route('/<int:goal_id>/complete', methods=['POST'])
-def complete_goal(goal_id):
+@auth_required
+def complete_goal(current_user, goal_id):
     """Mark a goal as complete/incomplete"""
-    user_data, error = verify_jwt()
-    if error:
-        return jsonify({'error': error}), 401
-        
     data = request.get_json()
     if 'completed' not in data:
         return jsonify({'error': 'Missing completed status'}), 400
         
-    goal, error = update_goal_status(goal_id, user_data['id'], data['completed'])
+    goal, error = update_goal_status(goal_id, current_user.id, data['completed'])
     if error:
         return jsonify({'error': error}), 400
         
     return jsonify(goal), 200
 
 @goals_routes.route('/<int:goal_id>', methods=['DELETE'])
-def remove_goal(goal_id):
+@auth_required
+def remove_goal(current_user, goal_id):
     """Delete a goal"""
-    user_data, error = verify_jwt()
-    if error:
-        return jsonify({'error': error}), 401
-        
-    result, error = delete_goal(goal_id, user_data['id'])
+    result, error = delete_goal(goal_id, current_user.id)
     if error:
         return jsonify({'error': error}), 400
         
