@@ -9,21 +9,54 @@ def get_all_users():
         return None, 'Database error'
     
 
-def create_user(username, password):
+def create_user(username, password, email=None, profile_image_url=None):
+    """
+    Create a new user
+    
+    Args:
+        username (str): The username for the new user
+        password (str): The password for the new user
+        email (str, optional): Email address for the new user
+        profile_image_url (str, optional): URL to the user's profile image
+        
+    Returns:
+        tuple: (user_data dict or None, error message or None)
+    """
+    # Check if username already exists
     existing_user = User.query.filter_by(username=username).first()
     if existing_user:
-        return None, 'User already exists'
+        return None, 'Username already exists'
     
-    new_user = User(username=username)
+    # Check if email already exists (if provided)
+    if email:
+        existing_email = User.query.filter_by(email=email).first()
+        if existing_email:
+            return None, 'Email already in use'
+    
+    # Set default profile image if none provided
+    if not profile_image_url:
+        profile_image_url = 'https://i.imgur.com/3sceVnu.jpeg'  # Default profile image
+    
+    # Create new user with all provided fields
+    new_user = User(
+        username=username,
+        email=email,
+        profile_image_url=profile_image_url
+    )
     new_user.set_password(password)
-
+    
     try:
         db.session.add(new_user)
         db.session.commit()
-        return {'id': new_user.id, 'username': new_user.username}, None
+        return {
+            'id': new_user.id, 
+            'username': new_user.username,
+            'email': new_user.email,
+            'profile_image_url': new_user.profile_image_url
+        }, None
     except Exception as e:
         db.session.rollback()
-        return None, 'Database error'
+        return None, f'Database error: {str(e)}'
 
 
 # This function talks to the route search_user in user_routes.py

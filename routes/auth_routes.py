@@ -8,10 +8,24 @@ from controllers.user_controller import create_user
 auth_routes = Blueprint('auth_routes', __name__)
 
 #Login
-@auth_routes.route('/login', methods=['POST'])
+@auth_routes.route('/login', methods=['POST', 'OPTIONS'])
 def login():
+    # Handle CORS preflight requests
+    if request.method == 'OPTIONS':
+        response = make_response()
+        response.headers.add('Access-Control-Allow-Methods', 'POST')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        return response, 200
+        
+    # Check Content-Type
+    if not request.is_json:
+        print(f"Invalid Content-Type: {request.headers.get('Content-Type')}")
+        return jsonify({'error': 'Content-Type must be application/json'}), 415
+        
+    # Normal login flow
     data = request.get_json()
-
+    print(f"Received login data: {data}")  # Add debug logging
+    
     # Validate that required fields exist in request
     if not data or 'username' not in data or 'password' not in data:
         return jsonify({'error': 'Missing username or password'}), 400
@@ -42,11 +56,15 @@ def register():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
+    email = data.get('email')
+    profile_image_url = data.get('profile_image_url', 'https://i.imgur.com/3sceVnu.jpeg')  # Default image if none provided
 
-    if not username or not password:
-        return jsonify({'error': 'Missing username or password'}), 400
+    # Validate required fields
+    if not username or not password or not email:
+        return jsonify({'error': 'Missing required fields: username, password, and email'}), 400
 
-    user_data, error = create_user(username=username, password=password)
+    # Create user with all required fields
+    user_data, error = create_user(username=username, password=password, email=email, profile_image_url=profile_image_url)
 
     if error:
         return jsonify({'error': error}), 400
