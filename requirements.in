@@ -1,0 +1,13 @@
+flask
+flask-sqlalchemy
+flask-cors
+sqlalchemy
+python-dotenv
+pyjwt
+werkzeug
+requests
+pytest
+pytest-cov
+pip-tools
+pytz
+dotenv
