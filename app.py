@@ -68,7 +68,7 @@ def create_test_user():
             username="admin",
             hashed_password=hashed_password,
             email="admin@example.com",
-            profile_image_url="https://via.placeholder.com/150"
+            profile_image_url="https://i.imgur.com/3sceVnu.jpeg"
         )
 
         db.session.add(user)
