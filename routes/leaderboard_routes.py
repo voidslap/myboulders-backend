@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify
 from controllers.leaderboard_controller import get_leaderboard_data
+from utils.auth_decorator import auth_required
 
 leaderboard_routes = Blueprint('leaderboard', __name__)
 
