@@ -88,47 +88,74 @@ Varje gruppmedlem ansvarar för en egen undersida i applikationen (t.ex. `/my-pr
 
 ## Databasstruktur
 MyBoulders Database Structure
-Users
+
+## Users
+
 id (Integer, PK, autoincrement)
+
 username (String, NOT NULL, UNIQUE)
+
 hashed_password (String, NOT NULL)
+
 email (String, NOT NULL, UNIQUE)
+
 profile_image_url (String, NOT NULL)
+
 register_date (DateTime, NOT NULL, DEFAULT now)
 
-##Routes
+## Routes
 id (Integer, PK, autoincrement)
+
 difficulty_id (Integer, FK, NOT NULL)
+
 type (String, NOT NULL)
 
-##Difficulty Levels
+## Difficulty Levels
 id (Integer, PK, autoincrement)
+
 grade (String, NOT NULL)
 
-##Completed Routes
+## Completed Routes
 id (Integer, PK, autoincrement)
+
 user_id (Integer, FK, NOT NULL)
+
 route_id (Integer, FK, NOT NULL)
+
 flash (Boolean, NOT NULL)
+
 date (DateTime, NOT NULL, DEFAULT now)
+
 image_url (String, NULL)
 
-##Achievements
+## Achievements
 id (Integer, PK, autoincrement)
+
 user_id (Integer, FK, NOT NULL)
+
 achievement_name (String, NOT NULL)
+
 achievement_date (DateTime, NOT NULL, DEFAULT now)
 
-##Goals
+## Goals
 id (Integer, PK, autoincrement)
+
 user_id (Integer, FK, NOT NULL)
+
 title (String, NOT NULL)
+
 description (Text, NULL)
+
 target_grade (String, NULL)
+
 deadline (DateTime, NULL)
+
 completed (Boolean, DEFAULT FALSE)
+
 completed_date (DateTime, NULL)
+
 created_at (DateTime, DEFAULT now)
+
 updated_at (DateTime, DEFAULT now)
 
 
@@ -141,8 +168,13 @@ updated_at (DateTime, DEFAULT now)
 
 ## Mall till .env fil:
 DATABASE_URL=
+
 IMGUR_CLIENT_ID=
+
 IMGUR_CLIENT_SECRET=
+
 IMGUR_USERNAME=
+
 IMGUR_PASSWORD=
+
 SECRET_KEY=
