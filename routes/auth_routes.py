@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, make_response
 from controllers import auth_controller
 from controllers.auth_controller import authenticate_user, verify_jwt
 from controllers.user_controller import create_user
-
+from models.users_model import User
 
 # __name__  is telling Flask "where am I in the Python package structure"
 auth_routes = Blueprint('auth_routes', __name__)
@@ -79,3 +79,24 @@ def check_auth():
         return jsonify({'error': error}), 401
     
     return jsonify({'authenticated': True, 'user': user_data}), 200
+
+@auth_routes.route('/me', methods=['GET'])
+def get_current_user():
+    """Get the currently authenticated user's data"""
+    user_data, auth_error = verify_jwt()
+    if auth_error:
+        return jsonify({'error': auth_error}), 401
+    
+    # Get additional user data from database
+    user_id = user_data['id']
+    user = User.query.get(user_id)
+    
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    return jsonify({
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'profile_image_url': user.profile_image_url
+    }), 200
