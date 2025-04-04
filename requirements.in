@@ -10,3 +10,4 @@ pytest
 pytest-cov
 pip-tools
 pytz
+dotenv
