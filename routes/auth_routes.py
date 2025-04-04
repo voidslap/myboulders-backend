@@ -2,16 +2,30 @@ from flask import Blueprint, jsonify, request, make_response
 from controllers import auth_controller
 from controllers.auth_controller import authenticate_user, verify_jwt
 from controllers.user_controller import create_user
-
+from models.users_model import User
 
 # __name__  is telling Flask "where am I in the Python package structure"
 auth_routes = Blueprint('auth_routes', __name__)
 
 #Login
-@auth_routes.route('/login', methods=['POST'])
+@auth_routes.route('/login', methods=['POST', 'OPTIONS'])
 def login():
+    # Handle CORS preflight requests
+    if request.method == 'OPTIONS':
+        response = make_response()
+        response.headers.add('Access-Control-Allow-Methods', 'POST')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        return response, 200
+        
+    # Check Content-Type
+    if not request.is_json:
+        print(f"Invalid Content-Type: {request.headers.get('Content-Type')}")
+        return jsonify({'error': 'Content-Type must be application/json'}), 415
+        
+    # Normal login flow
     data = request.get_json()
-
+    print(f"Received login data: {data}")  # Add debug logging
+    
     # Validate that required fields exist in request
     if not data or 'username' not in data or 'password' not in data:
         return jsonify({'error': 'Missing username or password'}), 400
@@ -42,11 +56,15 @@ def register():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
+    email = data.get('email')
+    profile_image_url = data.get('profile_image_url', 'https://i.imgur.com/3sceVnu.jpeg')  # Default image if none provided
 
-    if not username or not password:
-        return jsonify({'error': 'Missing username or password'}), 400
+    # Validate required fields
+    if not username or not password or not email:
+        return jsonify({'error': 'Missing required fields: username, password, and email'}), 400
 
-    user_data, error = create_user(username=username, password=password)
+    # Create user with all required fields
+    user_data, error = create_user(username=username, password=password, email=email, profile_image_url=profile_image_url)
 
     if error:
         return jsonify({'error': error}), 400
@@ -61,3 +79,24 @@ def check_auth():
         return jsonify({'error': error}), 401
     
     return jsonify({'authenticated': True, 'user': user_data}), 200
+
+@auth_routes.route('/me', methods=['GET'])
+def get_current_user():
+    """Get the currently authenticated user's data"""
+    user_data, auth_error = verify_jwt()
+    if auth_error:
+        return jsonify({'error': auth_error}), 401
+    
+    # Get additional user data from database
+    user_id = user_data['id']
+    user = User.query.get(user_id)
+    
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    return jsonify({
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'profile_image_url': user.profile_image_url
+    }), 200
